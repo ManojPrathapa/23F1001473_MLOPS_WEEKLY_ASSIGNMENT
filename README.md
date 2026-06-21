@@ -1,2 +1,2 @@
 # 23F1001473_MLOPS_WEEKLY_ASSIGNMENT
-MLOPS Course Assignments
+Week 1 Assignment
