@@ -81,4 +81,4 @@ Decision Tree Classifier achieved approximately 98.3% accuracy on the evaluation
 ## Author
 
 23F1001473
-MLOps Week 1 Assignment
+Manoj Prathapa
