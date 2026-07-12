@@ -2,7 +2,16 @@ name: MLOps CI
 
 on:
   push:
+    branches:
+      - "**"
   pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
 
 jobs:
   test:
@@ -26,18 +35,21 @@ jobs:
         uses: iterative/setup-cml@v2
 
       - name: Pull DVC Data
-        run: |
-          dvc pull
+        run: dvc pull
 
       - name: Run Tests
         run: |
           pytest | tee report.txt
 
-      - name: Publish Test Report with CML
-        env:
-          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Generate Test Report
         run: |
           echo "## Test Report" > report.md
           echo "" >> report.md
           cat report.txt >> report.md
+
+      - name: Comment on Pull Request
+        if: github.event_name == 'pull_request'
+        env:
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
           cml comment create report.md
