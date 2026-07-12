@@ -1,17 +1,17 @@
-pandas
-numpy
-scikit-learn
-joblib
-pyarrow
+numpy==1.26.4
+pandas==2.2.3
+scikit-learn==1.5.2
+joblib==1.4.2
+pyarrow==17.0.0
 
-google-cloud-storage
-google-cloud-aiplatform
+google-cloud-storage==2.19.0
+google-cloud-aiplatform==1.71.1
 
-feast
+feast==0.46.0
 
-pytest
+pytest==8.3.3
 
-dvc
-dvc-gs
+dvc==3.58.0
+dvc-gs==3.0.1
 
-cml
+cml==0.0.1
