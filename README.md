@@ -1,87 +1,84 @@
-# MLOps Weekly Assignment – Week 3
-## Integrating Feast Feature Store into the IRIS Machine Learning Pipeline
+# MLOps Weekly Assignment – Week 4
 
-**Student:** YOUR NAME
-
-**Roll Number:** YOUR IITM BS ROLL NUMBER
-
-**Course:** MLOps
-
-**Platform Used:** Google Cloud Platform (Workbench VM)
-
-**Branch:** week_3
+# Integrating Continuous Integration (CI) into the IRIS Machine Learning Pipeline
 
 ---
 
 # Objective
 
-The objective of this assignment is to integrate the Feast Feature Store into an existing IRIS machine learning pipeline.
+The objective of this assignment is to integrate Continuous Integration (CI) into the existing IRIS machine learning pipeline using GitHub Actions.
 
-Unlike the previous assignment where DVC was used to version datasets and models, Feast is introduced to solve the training-serving consistency problem by ensuring that both training and inference use exactly the same engineered features.
+In the previous assignments, DVC was used for dataset and model versioning, and Feast was integrated to ensure training-serving consistency. This assignment extends the pipeline by introducing automated testing and validation.
 
-The pipeline retrieves historical features from the offline store during training and retrieves real-time features from the online store during inference.
+Every code push and pull request automatically triggers GitHub Actions, which retrieves the latest versioned datasets and models using DVC, executes validation and model evaluation tests using Pytest, and publishes the test results as a Pull Request comment using CML.
+
+This ensures that every change made to the repository is automatically verified before being merged into the main branch.
 
 ---
 
 # Problem Statement
 
-In production ML systems, feature engineering is often implemented separately for training and inference.
+As machine learning projects grow larger, manually testing every change becomes difficult and error-prone.
 
-This causes Training-Serving Skew.
+Without Continuous Integration,
 
-Examples include:
+- Bugs may reach production.
+- Model quality may degrade unnoticed.
+- Invalid datasets may be used for training.
+- Team collaboration becomes difficult.
+- Deployment pipelines become unreliable.
 
-- Different preprocessing logic
-- Missing feature transformations
-- Different feature versions
-- Data inconsistencies
-
-Feast solves this issue by acting as a centralized feature repository.
+Continuous Integration solves these issues by automatically validating every code change before it is merged into the main branch.
 
 ---
 
 # Technology Stack
 
-- Python
-- Feast 0.64
-- SQLite
-- Pandas
+- Python 3.11
+- GitHub Actions
+- Pytest
+- DVC
+- Google Cloud Storage
+- Feast
 - Scikit-learn
+- Pandas
 - NumPy
-- PyArrow
-- Google Cloud Platform
-- Git
-- GitHub
+- Joblib
+- Google Cloud Vertex AI
+- CML (Continuous Machine Learning)
+- Git & GitHub
 
 ---
 
 # Project Architecture
 
-Raw IRIS Dataset
-        │
-        ▼
-Feature Definitions
-(Entity + FileSource + FeatureView)
-        │
-        ▼
-Feast Registry
-        │
-        ▼
-Offline Store (Parquet)
-        │
-        ├──────────────► Model Training
-        │
-        ▼
-Materialization
-        │
-        ▼
-SQLite Online Store
-        │
-        ▼
-Inference
-        │
-        ▼
-Prediction
+```
+Developer Push / Pull Request
+            │
+            ▼
+      GitHub Actions
+            │
+            ▼
+ Install Python & Dependencies
+            │
+            ▼
+      DVC Pull (GCS Remote)
+            │
+            ▼
+Retrieve Versioned Data & Model
+            │
+            ▼
+ Execute Pytest Test Suite
+            │
+            ▼
+Generate Test Report
+            │
+            ▼
+Publish Report using CML
+            │
+            ▼
+ Merge only after Successful Validation
+```
 
 ---
 
@@ -89,292 +86,240 @@ Prediction
 
 ## Task 1
 
-Initialized a Feast Feature Repository.
+### Data Validation Tests
 
-Configured
+Created automated Pytest test cases to validate the input dataset.
 
-- feature_store.yaml
-- SQLite Online Store
-- Local Registry
+The tests verify
+
+- Dataset schema
+- Missing values
+- Feature data types
+- Expected feature columns
+- Reasonable value ranges
+
+These tests ensure that invalid data cannot enter the training pipeline.
 
 ---
 
 ## Task 2
 
-Defined
+### Model Evaluation Tests
 
-Entity
+Created automated tests that
 
-```
-iris
-```
+- Load the trained Random Forest model
+- Run inference on the evaluation dataset
+- Calculate model performance
+- Verify that accuracy remains above the required threshold
 
-Join Key
-
-```
-iris_id
-```
-
-Created FileSource
-
-```
-iris_data_adapted_for_feast.parquet
-```
-
-Created Feature View
-
-Features
-
-- sepal_length
-- sepal_width
-- petal_length
-- petal_width
+If model quality degrades, the CI pipeline automatically fails.
 
 ---
 
 ## Task 3
 
-Applied the feature definitions.
+### Configure GitHub Actions
 
-```
-feast apply
-```
+Created a GitHub Actions workflow that automatically
 
-Materialized features into SQLite
+- Checks out the repository
+- Installs project dependencies
+- Pulls datasets and models using DVC
+- Executes the Pytest suite
+- Generates a test report
 
-```
-feast materialize
-```
-
-Verified
-
-- Registry created
-- Online Store created
-- Feature View registered
+This workflow executes entirely inside GitHub's hosted runner.
 
 ---
 
 ## Task 4
 
-Historical feature retrieval.
+### Enable CI on Every Push & Pull Request
 
-Training data is fetched using
+Configured GitHub Actions to automatically execute on
 
-```
-store.get_historical_features()
-```
+- Every Push
+- Every Pull Request
 
-instead of directly reading feature columns from CSV.
-
-The retrieved features were used to train a Random Forest classifier.
-
-Training Accuracy
-
-```
-1.0
-```
-
-Model saved as
-
-```
-iris_model.pkl
-```
+This guarantees that every code modification is tested before merging.
 
 ---
 
 ## Task 5
 
-Online inference.
+### Integrate CML
 
-Features were retrieved using
+Configured CML to automatically generate a test report after every successful test execution.
 
-```
-store.get_online_features()
-```
+The report includes
 
-The returned features were passed to the trained model.
+- Test execution summary
+- Pass/Fail status
+- Model evaluation metrics
 
-Prediction
+The generated report is automatically posted as a Pull Request comment.
 
-```
-versicolor
-```
+---
 
-The prediction exactly matched the original dataset label.
+## Task 6
+
+### Pull Request Workflow
+
+Created a feature branch for Week 4.
+
+Implemented the CI pipeline.
+
+Pushed the changes to GitHub.
+
+Created a Pull Request.
+
+Verified that GitHub Actions executed successfully.
+
+Reviewed the automatically generated CML report.
+
+Merged the Pull Request into the main branch.
 
 ---
 
 # Repository Structure
 
 ```
-iris_feature_repo/
+.github/
+    workflows/
+        ci.yml
 
-feature_store.yaml
+tests/
+    test_data_validation.py
+    test_model.py
 
-feature_definitions.py
+src/
 
-train.py
-
-inference.py
+models/
 
 data/
 
-iris_data_adapted_for_feast.csv
+requirements.txt
 
-iris_data_adapted_for_feast.parquet
+README.md
+
+dvc.yaml
+
+feature_store.yaml
 ```
 
 ---
 
-# Important Feast Components
+# GitHub Actions Workflow
 
-## Entity
+The CI pipeline performs the following steps automatically.
 
-Represents the primary key.
+1. Checkout Repository
+
+2. Setup Python Environment
+
+3. Install Dependencies
+
+4. Pull Versioned Data using DVC
+
+5. Execute Pytest Tests
+
+6. Generate Test Report
+
+7. Publish Pull Request Comment using CML
+
+---
+
+# Testing Workflow
 
 ```
-iris_id
+Developer Push
+      │
+      ▼
+GitHub Actions Triggered
+      │
+      ▼
+Install Dependencies
+      │
+      ▼
+DVC Pull
+      │
+      ▼
+Run Data Validation Tests
+      │
+      ▼
+Run Model Evaluation Tests
+      │
+      ▼
+Generate Report
+      │
+      ▼
+Publish CML Comment
 ```
-
----
-
-## File Source
-
-Reads historical feature data from Parquet.
-
----
-
-## Feature View
-
-Defines
-
-- feature schema
-- source
-- entity
-- TTL
-
----
-
-## Offline Store
-
-Used for
-
-- Training
-- Historical feature retrieval
-
----
-
-## Online Store
-
-SQLite
-
-Used for
-
-- Low latency inference
-
----
-
-# Workflow
-
-1. Create Feature Repository
-
-↓
-
-2. Define Entity
-
-↓
-
-3. Define Data Source
-
-↓
-
-4. Create Feature View
-
-↓
-
-5. Apply Definitions
-
-↓
-
-6. Materialize Features
-
-↓
-
-7. Train Model
-
-↓
-
-8. Fetch Online Features
-
-↓
-
-9. Predict
 
 ---
 
 # Results
 
-✔ Feast Repository Created
+✔ GitHub Actions Successfully Configured
 
-✔ Feature Definitions Registered
+✔ Automatic CI Trigger on Every Push
 
-✔ SQLite Online Store Created
+✔ Automatic CI Trigger on Every Pull Request
 
-✔ Historical Features Retrieved
+✔ DVC Successfully Pulled Versioned Data
 
-✔ Model Trained Successfully
+✔ Data Validation Tests Passed
 
-✔ Accuracy = 100%
+✔ Model Evaluation Tests Passed
 
-✔ Online Feature Retrieval Successful
+✔ Test Report Generated
 
-✔ Real-time Prediction Successful
+✔ CML Successfully Posted Pull Request Comment
+
+✔ Pull Request Successfully Merged into Main
 
 ---
 
 # Challenges Faced
 
-## CSV Compatibility
+### Dependency Conflicts
 
-Initially Feast attempted to interpret the CSV as a Parquet dataset.
+Initially multiple package version conflicts occurred between Feast, Pandas and Python.
 
-Solution
+**Solution**
 
-Converted the dataset to Parquet using Pandas.
-
----
-
-## Timestamp Format
-
-The timestamp columns were stored as strings.
-
-Solution
-
-Converted
-
-event_timestamp
-
-and
-
-created_timestamp
-
-to datetime before writing the Parquet file.
+Pinned compatible dependency versions and migrated the workflow to Python 3.11.
 
 ---
 
-## Materialization Error
+### CML Installation Issue
 
-Received
+The PyPI version of CML depended on deprecated packages.
 
-AttributeError
+**Solution**
 
-```
-'str' object has no attribute tzinfo
-```
+Installed CML using the official `iterative/setup-cml` GitHub Action.
 
-Solution
+---
 
-Converted timestamp columns into datetime objects before materialization.
+### DVC Compatibility Error
+
+Encountered a PathSpec compatibility issue while running `dvc pull`.
+
+**Solution**
+
+Updated DVC and installed compatible dependency versions.
+
+---
+
+### GitHub Actions Permissions
+
+Initially CML could not publish Pull Request comments because of insufficient workflow permissions.
+
+**Solution**
+
+Granted `pull-requests: write` and `issues: write` permissions in the workflow and enabled repository workflow write permissions.
 
 ---
 
@@ -382,17 +327,18 @@ Converted timestamp columns into datetime objects before materialization.
 
 Through this assignment I learned
 
-- Importance of Feature Stores
-- Difference between Offline and Online Stores
-- Feast Repository Structure
-- Feature Materialization
-- Historical Feature Retrieval
-- Online Feature Retrieval
-- Training Serving Consistency
-- Production ML Pipeline Design
+- Continuous Integration fundamentals
+- GitHub Actions workflow creation
+- Automated ML testing using Pytest
+- DVC integration inside CI pipelines
+- Pull Request automation using CML
+- GitHub workflow permissions
+- Dependency management in CI
+- Debugging GitHub Actions
+- Production-ready MLOps pipeline design
 
 ---
 
 # Conclusion
 
-This assignment demonstrates the integration of Feast into an ML workflow using the IRIS dataset. Feature engineering is centralized inside Feast, ensuring consistent feature computation during both model training and inference. This architecture reduces training-serving skew and reflects best practices used in production machine learning systems.
+This assignment demonstrates the successful integration of Continuous Integration into the IRIS machine learning pipeline. GitHub Actions automatically validates every code change by retrieving versioned datasets and models through DVC, executing automated tests using Pytest, and publishing results through CML. The completed workflow ensures reliable model quality, improves collaboration, and reflects modern MLOps practices used in production environments.
