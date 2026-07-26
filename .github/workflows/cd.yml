@@ -1,0 +1,53 @@
+name: IRIS Continuous Deployment
+
+on:
+  push:
+    branches:
+      - week_6
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker
+        run: |
+          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Build Docker Image
+        run: |
+          docker build \
+          -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/iris-repo/iris-api:latest \
+          ./api
+
+      - name: Push Docker Image
+        run: |
+          docker push \
+          us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/iris-repo/iris-api:latest
+
+      - name: Get GKE Credentials
+        run: |
+          gcloud container clusters get-credentials \
+          ${{ secrets.GKE_CLUSTER }} \
+          --region ${{ secrets.GKE_REGION }}
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f k8s/deployment.yaml
+          kubectl rollout status deployment/iris-api
