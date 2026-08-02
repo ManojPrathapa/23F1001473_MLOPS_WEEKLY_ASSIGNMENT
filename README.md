@@ -1,10 +1,11 @@
+
 ```markdown
 # 📈 High-Frequency Stock Movement Predictor: End-to-End MLOps Pipeline
 
-[![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
-[![MLOps](https://img.shields.io/badge/MLOps-DVC%20%7C%20MLflow%20%7C%20Feast-orange)]()
-[![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF.svg?logo=github)]()
-[![Cloud](https://img.shields.io/badge/GCP-Cloud%20Storage-4285F4.svg?logo=googlecloud)]()
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg?style=flat-square&logo=python)](https://www.python.org/)
+[![MLOps Stack](https://img.shields.io/badge/MLOps-DVC%20%7C%20MLflow%20%7C%20Feast-orange?style=flat-square)](https://mlflow.org/)
+[![CI/CD Status](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF.svg?style=flat-square&logo=github)](https://github.com/features/actions)
+[![Cloud Storage](https://img.shields.io/badge/GCP-Cloud%20Storage-4285F4.svg?style=flat-square&logo=googlecloud)](https://cloud.google.com/storage)
 
 ## 📖 Project Overview
 This repository contains a production-grade **Machine Learning Operations (MLOps)** pipeline designed to predict short-term (5-minute) stock price movements using high-frequency trading data. 
@@ -95,8 +96,3 @@ This project solves these challenges by implementing a strict MLOps architecture
 > **Business Impact:** The team never has to guess how a model performs. Every single code change results in an auditable, transparent performance report attached directly to the code history.
 
 ---
-
-
-```
-
-```
