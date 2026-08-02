@@ -1,12 +1,13 @@
-name: IRIS Continuous Deployment
+name: IRIS Continuous Deployment with Stress Testing
 
 on:
   push:
     branches:
-      - week_6
+      - week_7
+  workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  build-deploy-and-test:
     runs-on: ubuntu-latest
 
     permissions:
@@ -14,14 +15,13 @@ jobs:
       id-token: write
 
     steps:
-
       - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+          credentials_json: '${{ secrets.GCP_CREDENTIALS || secrets.GCP_SA_KEY }}'
 
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v2
@@ -33,21 +33,36 @@ jobs:
       - name: Build Docker Image
         run: |
           docker build \
-          -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/iris-repo/iris-api:latest \
-          ./api
+            -t us-central1-docker.pkg.dev/f1001473-mlops-week1/iris-repo/iris-api:latest \
+            ./api
 
       - name: Push Docker Image
         run: |
           docker push \
-          us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/iris-repo/iris-api:latest
+            us-central1-docker.pkg.dev/f1001473-mlops-week1/iris-repo/iris-api:latest
 
       - name: Get GKE Credentials
         run: |
-          gcloud container clusters get-credentials \
-          ${{ secrets.GKE_CLUSTER }} \
-          --region ${{ secrets.GKE_REGION }}
+          gcloud container clusters get-credentials iris-cluster --zone=us-central1-a
 
       - name: Deploy to Kubernetes
         run: |
           kubectl apply -f k8s/deployment.yaml
-          kubectl rollout status deployment/iris-api
+          kubectl apply -f k8s/service.yaml
+          kubectl rollout status deployment/iris-api --timeout=180s
+
+      - name: Install wrk Load Testing Tool
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wrk
+
+      - name: Run Automated Stress Test with wrk
+        run: |
+          EXTERNAL_IP=""
+          while [ -z "$EXTERNAL_IP" ]; do
+            echo "Waiting for LoadBalancer IP..."
+            EXTERNAL_IP=$(kubectl get svc iris-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+            [ -z "$EXTERNAL_IP" ] && sleep 5
+          done
+          echo "Executing wrk stress test against API at External IP: $EXTERNAL_IP"
+          wrk -t2 -c50 -d15s -s post.lua http://${EXTERNAL_IP}/predict/
