@@ -1,398 +1,112 @@
-# MLOps Weekly Assignment – Week 3
-## Integrating Feast Feature Store into the IRIS Machine Learning Pipeline
+# 🛡️ MLOps Week 8: Integrating MLSecOps into the IRIS Pipeline
 
-**Student:** YOUR NAME
+![MLflow](https://img.shields.io/badge/Tracking-MLflow-0194E2?logo=mlflow&logoColor=white)
+![Scikit-Learn](https://img.shields.io/badge/Modeling-Scikit--Learn-F7931E?logo=scikit-learn&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![GCP](https://img.shields.io/badge/Google%20Cloud-Cloud%20Shell-4285F4?logo=googlecloud&logoColor=white)
+![Security](https://img.shields.io/badge/Security-MLSecOps-red)
 
-**Roll Number:** YOUR IITM BS ROLL NUMBER
-
-**Course:** MLOps
-
-**Platform Used:** Google Cloud Platform (Workbench VM)
-
-**Branch:** week_3
-
----
-
-# Objective
-
-The objective of this assignment is to integrate the Feast Feature Store into an existing IRIS machine learning pipeline.
-
-Unlike the previous assignment where DVC was used to version datasets and models, Feast is introduced to solve the training-serving consistency problem by ensuring that both training and inference use exactly the same engineered features.
-
-The pipeline retrieves historical features from the offline store during training and retrieves real-time features from the online store during inference.
+**Author:** Manoj Prathapa ([@ManojPrathapa](https://github.com/ManojPrathapa))  
+**Institution:** IIT Madras — BS in Data Science and Applications (Class of 2026)  
+**Repository:** `23F1001473_MLOPS_WEEKLY_ASSIGNMENT`  
+**Target Branch:** `week_8`  
 
 ---
 
-# Problem Statement
+## 📌 Executive Summary
 
-In production ML systems, feature engineering is often implemented separately for training and inference.
+This repository contains the implementation for **Week 8: MLSecOps and Data Poisoning**. 
 
-This causes Training-Serving Skew.
+Traditional MLOps pipelines ensure reliability and scalability but often lack defenses against intentional adversarial manipulation. This project integrates security thinking into the ML lifecycle by simulating a **Data Poisoning Attack** on the IRIS dataset. We inject severe, out-of-distribution noise and randomized labels at varying corruption levels, evaluating the degradation of the model's decision boundaries using **MLflow**.
 
-Examples include:
-
-- Different preprocessing logic
-- Missing feature transformations
-- Different feature versions
-- Data inconsistencies
-
-Feast solves this issue by acting as a centralized feature repository.
+### Key Milestones Delivered:
+1. **Threat Vector Analysis:** Outlined primary ML vulnerabilities including Data Poisoning, Adversarial Examples, Model Extraction, and Prompt Injection.
+2. **Data Poisoning Simulation:** Programmatically injected 0%, 5%, 10%, and 50% feature and label noise into the IRIS training set.
+3. **Experiment Tracking:** Automated the tracking of Accuracy, Precision, Recall, and F1 Scores across all corruption levels using a local MLflow SQLite backend.
+4. **Resilience & Bottleneck Analysis:** Analyzed how `DecisionTreeClassifier` handles low-level noise (5-10%) via orthogonal leaf isolation and when it critically degrades (50%).
+5. **Mitigation Engineering:** Formulated production-grade mitigation strategies emphasizing Data Quality Gates and statistical anomaly detection.
 
 ---
 
-# Technology Stack
+## 🦠 ML Security Threat Vectors
 
-- Python
-- Feast 0.64
-- SQLite
-- Pandas
-- Scikit-learn
-- NumPy
-- PyArrow
-- Google Cloud Platform
-- Git
-- GitHub
+Understanding the attack surface is the first step in MLSecOps. Threats can target any stage of the pipeline:
+
+| Threat Vector | Target Stage | Description | Real-World Example |
+| :--- | :--- | :--- | :--- |
+| **Data Poisoning** | Data Ingestion / Training | Injecting corrupted samples or false labels to degrade accuracy or embed backdoors. | Submitting millions of mislabeled "not spam" emails to retrain an email filter. |
+| **Adversarial Examples** | Inference / API | Applying subtle, calculated perturbations to inputs to force misclassification. | Placing specific stickers on a stop sign so computer vision models read "Speed Limit 45". |
+| **Model Extraction** | Deployment | Repeatedly querying a live prediction endpoint to reverse-engineer model weights. | Stealing proprietary pricing algorithms by systematically pinging a competitor's API. |
+| **Prompt Injection** | LLM Interface | Embedding malicious instructions in user inputs to override system constraints. | Hiding text in a resume instructing an AI screener to bypass all checks and "Hire immediately". |
 
 ---
 
-# Project Architecture
+## 🔬 Data Poisoning Simulation & Results
 
-Raw IRIS Dataset
-        │
-        ▼
-Feature Definitions
-(Entity + FileSource + FeatureView)
-        │
-        ▼
-Feast Registry
-        │
-        ▼
-Offline Store (Parquet)
-        │
-        ├──────────────► Model Training
-        │
-        ▼
-Materialization
-        │
-        ▼
-SQLite Online Store
-        │
-        ▼
-Inference
-        │
-        ▼
-Prediction
+### Methodology
+To simulate an attack, the `run_mlsecops_poisoning.py` script targets the training dataset. At a specified corruption rate $r \in \{0.0, 0.05, 0.10, 0.50\}$, it selects random indices and overwrites all feature values with uniform random noise between `0.0` and `10.0`, assigning a random target label. The test set remains strictly pristine to measure real-world impact.
+
+### MLflow Validation Outcomes
+
+| Poison % | Accuracy | F1 Score | MLflow Run Name | Observation |
+| :---: | :---: | :---: | :--- | :--- |
+| **0%** | `1.0000` | `1.0000` | `Poisoning_Level_0%` | Baseline clean performance. |
+| **5%** | `1.0000` | `1.0000` | `Poisoning_Level_5%` | Model isolates the random noise into deep leaf nodes. |
+| **10%** | `1.0000` | `1.0000` | `Poisoning_Level_10%`| Signal remains strong enough to maintain core decision boundaries. |
+| **50%** | `0.9556` | `0.9553` | `Poisoning_Level_50%`| Noticeable degradation; noise overpowers the signal, warping boundaries. |
+
+*Note: Metrics logged locally via MLflow (`mlflow.db`).*
 
 ---
 
-# Assignment Tasks
+## 🛡️ Production Mitigation Strategies
 
-## Task 1
+If half of your training data is maliciously altered, simply "collecting more data" does not restore performance—it amplifies the poisoned volume. **Data Quality strictly outweighs Data Quantity.**
 
-Initialized a Feast Feature Repository.
-
-Configured
-
-- feature_store.yaml
-- SQLite Online Store
-- Local Registry
+To secure the pipeline in production:
+1. **Data Quality Gates:** Use tools like *Great Expectations* to enforce strict schema validation and biological bounding constraints (e.g., Reject Sepal Length > 10).
+2. **Anomaly Detection:** Apply unsupervised clustering (e.g., Isolation Forests) during the ELT phase to quarantine batches showing severe divergence from historical distributions.
+3. **Data Provenance:** Utilize DVC lineage tracking to audit the origin and authorization of incoming training batches.
 
 ---
 
-## Task 2
+## 📂 Repository Structure
 
-Defined
+```text
+23F1001473_MLOPS_WEEKLY_ASSIGNMENT/
+├── run_mlsecops_poisoning.py     # Data poisoning simulation and MLflow tracking script
+├── mlflow.db                     # Local SQLite MLflow tracking database
+├── mlartifacts/                  # Local MLflow artifact storage
+├── evidence/
+│   ├── RUBRIC_00_SETUP.md        # Environment setup documentation
+│   └── RUBRIC_2_3_POISONING.md   # Execution tracking and results
+├── AI_USAGE_DOC.md               # Mandatory AI tool usage transparency documentation
+├── VIDEO_SCRIPT.md               # 15-minute complete screencast transcription
+└── README.md                     # Project documentation
 
-Entity
-
-```
-iris
-```
-
-Join Key
-
-```
-iris_id
-```
-
-Created FileSource
-
-```
-iris_data_adapted_for_feast.parquet
-```
-
-Created Feature View
-
-Features
-
-- sepal_length
-- sepal_width
-- petal_length
-- petal_width
-
----
-
-## Task 3
-
-Applied the feature definitions.
-
-```
-feast apply
-```
-
-Materialized features into SQLite
-
-```
-feast materialize
-```
-
-Verified
-
-- Registry created
-- Online Store created
-- Feature View registered
-
----
-
-## Task 4
-
-Historical feature retrieval.
-
-Training data is fetched using
-
-```
-store.get_historical_features()
-```
-
-instead of directly reading feature columns from CSV.
-
-The retrieved features were used to train a Random Forest classifier.
-
-Training Accuracy
-
-```
-1.0
-```
-
-Model saved as
-
-```
-iris_model.pkl
 ```
 
 ---
 
-## Task 5
+## 💻 Quick Start & Reproducibility
 
-Online inference.
+### 1. Run the Poisoning Simulation
 
-Features were retrieved using
+```bash
+# Install dependencies
+pip install mlflow scikit-learn pandas numpy
 
-```
-store.get_online_features()
-```
-
-The returned features were passed to the trained model.
-
-Prediction
+# Execute the simulation script
+python3 run_mlsecops_poisoning.py
 
 ```
-versicolor
-```
 
-The prediction exactly matched the original dataset label.
+### 2. View Metrics in MLflow
 
----
-
-# Repository Structure
+```bash
+# Start the MLflow UI
+python3 -m mlflow ui --host 0.0.0.0 --port 5000
 
 ```
-iris_feature_repo/
 
-feature_store.yaml
-
-feature_definitions.py
-
-train.py
-
-inference.py
-
-data/
-
-iris_data_adapted_for_feast.csv
-
-iris_data_adapted_for_feast.parquet
-```
-
----
-
-# Important Feast Components
-
-## Entity
-
-Represents the primary key.
-
-```
-iris_id
-```
-
----
-
-## File Source
-
-Reads historical feature data from Parquet.
-
----
-
-## Feature View
-
-Defines
-
-- feature schema
-- source
-- entity
-- TTL
-
----
-
-## Offline Store
-
-Used for
-
-- Training
-- Historical feature retrieval
-
----
-
-## Online Store
-
-SQLite
-
-Used for
-
-- Low latency inference
-
----
-
-# Workflow
-
-1. Create Feature Repository
-
-↓
-
-2. Define Entity
-
-↓
-
-3. Define Data Source
-
-↓
-
-4. Create Feature View
-
-↓
-
-5. Apply Definitions
-
-↓
-
-6. Materialize Features
-
-↓
-
-7. Train Model
-
-↓
-
-8. Fetch Online Features
-
-↓
-
-9. Predict
-
----
-
-# Results
-
-✔ Feast Repository Created
-
-✔ Feature Definitions Registered
-
-✔ SQLite Online Store Created
-
-✔ Historical Features Retrieved
-
-✔ Model Trained Successfully
-
-✔ Accuracy = 100%
-
-✔ Online Feature Retrieval Successful
-
-✔ Real-time Prediction Successful
-
----
-
-# Challenges Faced
-
-## CSV Compatibility
-
-Initially Feast attempted to interpret the CSV as a Parquet dataset.
-
-Solution
-
-Converted the dataset to Parquet using Pandas.
-
----
-
-## Timestamp Format
-
-The timestamp columns were stored as strings.
-
-Solution
-
-Converted
-
-event_timestamp
-
-and
-
-created_timestamp
-
-to datetime before writing the Parquet file.
-
----
-
-## Materialization Error
-
-Received
-
-AttributeError
-
-```
-'str' object has no attribute tzinfo
-```
-
-Solution
-
-Converted timestamp columns into datetime objects before materialization.
-
----
-
-# Learning Outcomes
-
-Through this assignment I learned
-
-- Importance of Feature Stores
-- Difference between Offline and Online Stores
-- Feast Repository Structure
-- Feature Materialization
-- Historical Feature Retrieval
-- Online Feature Retrieval
-- Training Serving Consistency
-- Production ML Pipeline Design
-
----
-
-# Conclusion
-
-This assignment demonstrates the integration of Feast into an ML workflow using the IRIS dataset. Feature engineering is centralized inside Feast, ensuring consistent feature computation during both model training and inference. This architecture reduces training-serving skew and reflects best practices used in production machine learning systems.
+Navigate to `http://localhost:5000` (or your Web Preview port) to view the `MLSecOps_Data_Poisoning` experiment.
