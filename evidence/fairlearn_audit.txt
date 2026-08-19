@@ -1,0 +1,7 @@
+Fairlearn MetricFrame Audit Summary
+===================================
+
+          accuracy  precision  recall
+location                             
+0              1.0        1.0     1.0
+1              1.0        1.0     1.0
