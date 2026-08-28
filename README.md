@@ -1,62 +1,46 @@
-# ⚖️ MLOps Week 9: Explainability, Fairness, and Drift in the IRIS Pipeline
+# 🛡️ MLOps Week 11: Governing the Fine-Tuned LLM Guardrails on the IRIS Pipeline
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
-![Fairlearn](https://img.shields.io/badge/Fairness-Fairlearn-8A2BE2)
-![SHAP](https://img.shields.io/badge/Explainability-SHAP-00C853)
-![Scipy](https://img.shields.io/badge/Stats-SciPy-0054A6?logo=scipy&logoColor=white)
-![Scikit-Learn](https://img.shields.io/badge/Modeling-Scikit--Learn-F7931E?logo=scikit-learn&logoColor=white)
+![LLMOps](https://img.shields.io/badge/Governance-LLMOps-blueviolet)
+![Vertex AI](https://img.shields.io/badge/Platform-Google%20Vertex%20AI-4285F4?logo=googlecloud&logoColor=white)
+![Guardrails](https://img.shields.io/badge/Defense-Input%20%26%20Output%20Guardrails-00C853)
 
 **Author:** Manoj Prathapa  
-**Institution:** IIT Madras — BS in Data Science and Applications  
+**Course:** IIT Madras BS in Data Science & Applications — MLOps  
 **Repository:** `23F1001473_MLOPS_WEEKLY_ASSIGNMENT`  
-**Target Branch:** `week_9`  
+**Target Branch:** `week_11`  
 
 ---
 
 ## 📌 Executive Summary
 
-This repository contains the complete implementation for **Week 9: Explainability, Fairness, and Drift**. 
+While standard ML evaluation tests whether a model produces correct outputs on well-formed inputs, it fails to account for adversarial threats unique to the text-in/text-out interfaces of Large Language Models.
 
-While previous weeks focused on automation, scaling, and security, a secure model can still be fundamentally untrustworthy if it is biased, opaque, or degrades silently in production. This week establishes the foundation of **Responsible AI** by auditing the IRIS pipeline for demographic fairness, explaining black-box decisions using Game Theory (SHAP), and statistically monitoring feature distributions for production drift.
-
-### Key Milestones Delivered:
-1. **Fairness Auditing:** Introduced a sensitive `location` attribute and used `Fairlearn` MetricFrames to prove equitable performance across sub-populations.
-2. **Model Explainability:** Generated `SHAP` (SHapley Additive exPlanations) values and summary plots to demystify feature attributions for the `virginica` class.
-3. **Data Drift Detection:** Simulated production feature shifts and deployed 2-sample Kolmogorov-Smirnov (KS) statistical tests to successfully trigger drift alerts.
-4. **ML Governance:** Authored a formal, production-ready Model Card detailing intended use, limitations, and accountability metrics.
-
----
-
-## 🔬 Implementation Details
-
-### 1. Fairness Assessment (Fairlearn)
-- **Sensitive Attribute:** A `location` feature (0 or 1) was assigned randomly to the dataset.
-- **Rule:** Excluded from training to prevent proxy bias; used strictly for post-hoc auditing.
-- **Outcome:** The `MetricFrame` revealed identical Accuracy, Precision, and Recall (1.0) across both Location 0 and Location 1, confirming a **0% performance gap**.
-
-### 2. SHAP Explainability (Virginica Class)
-- **Explainer Used:** `shap.TreeExplainer`
-- **Insights:** The SHAP summary plot (`Screenshots/shap_summary_virginica.png`) proves that high values (red dots) of `petal length` and `petal width` are the dominant forces pushing the model toward predicting the `virginica` class.
-
-### 3. Data Drift Detection (SciPy KS-Test)
-- **Simulation:** Added $+0.8$ cm to `petal length` and $+0.4$ cm to `petal width`.
-- **Detection Method:** Two-sample Kolmogorov-Smirnov test comparing the original training distribution against the simulated production distribution.
-- **Outcome:** Successfully detected statistically significant drift ($p < 0.05$) exclusively in the altered petal features.
-
----
-
-## 📂 Repository Structure
+This repository implements **Runtime LLM Governance and Guardrails** for the IRIS classification pipeline, defending against **Prompt Injection** and **Prompt Leakage** across both raw-feature (`v1`) and natural language description (`v2`) models.
 
 ```text
+[User Input]
+     │
+     ▼
+[Input Guardrails] ──(Matches Blocklist / Schema Violation?)──► [Return {"blocked": true}]
+     │ (Clean)
+     ▼
+[Fine-Tuned LLM Endpoint (v1 / v2)]
+     │
+     ▼
+[Output Guardrails] ──(Detects Secret Tokens / Off-topic?)────► [Return Fallback Safe Message]
+     │ (Safe)
+     ▼
+[Verified Response: setosa / versicolor / virginica]
+
+🔬 Benchmark & Governance EvaluationGovernance MetricBefore GuardrailsAfter GuardrailsOperational InterpretationPrompt Injection Block Rate0.0% (Vulnerable)100.0% (Guarded)100% of instruction overrides and roleplay attacks intercepted.Prompt Leakage Block Rate0.0% (Vulnerable)100.0% (Guarded)System keys and context window extraction attempts neutralized.False Positive RateN/A0.0% (Optimal)Zero legitimate IRIS feature inputs were incorrectly blocked.Clean Input Accuracy100.0%100.0%Normal classification performance preserved.Accuracy DeltaN/A0.0%Guardrail validation layer introduces zero performance penalty.
+
+📂 Repository Structure
 23F1001473_MLOPS_WEEKLY_ASSIGNMENT/
-├── run_week9_pipeline.py         # Unified script for Fairness, SHAP, and Drift
-├── MODEL_CARD.md                 # ML Governance Model Card
-├── Screenshots/
-│   └── shap_summary_virginica.png # SHAP explainability plot
+├── run_llm_guardrails_evaluation.py  # Master evaluation & guardrails execution script
 ├── evidence/
-│   ├── RUBRIC_00_SETUP.md        # Environment setup logs
-│   ├── fairlearn_audit.txt       # Disaggregated metric outputs
-│   └── drift_detection_report.txt# KS-test p-value results
-├── AI_USAGE_DOC.md               # Transparency documentation
-├── VIDEO_SCRIPT.md               # Video screencast transcription
-└── README.md                     # Project documentation
+│   ├── RUBRIC_00_SETUP.md            # Environment setup verification
+│   └── guardrails_evaluation_report.txt # Full benchmark tables & raw red-team logs
+├── AI_USAGE_DOC.md                   # Mandatory AI tool usage transparency document
+├── VIDEO_SCRIPT.md                   # Complete 15-minute video screencast transcript
+└── README.md                         # Project documentation
